@@ -25,8 +25,9 @@ public class TradeService {
         this.historyRepo = historyRepo;
     }
 
+
     public String trade(Long userId, String symbol, String action, Double quantity) {
-        TradingPrice latestPrice = priceRepo.findLatestTradingPriceByCrypto(symbol);
+        TradingPrice latestPrice = priceRepo.findLatestTradingPriceByCryptoCurr(symbol);
         if (latestPrice == null) {
             return "No prices available for trading";
         }

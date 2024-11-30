@@ -2,6 +2,8 @@ package com.crypto.service;
 
 import com.crypto.model.TradingPrice;
 import com.crypto.repository.TradingPriceRepo;
+import jakarta.transaction.Transactional;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import com.crypto.utils.Constants;
@@ -21,20 +23,23 @@ public class PriceAggregationService {
 
     public PriceAggregationService(TradingPriceRepo tradingPriceRepo) {
         this.tradingPriceRepo = tradingPriceRepo;
-        this.webClient = WebClient.builder().build();
+        this.webClient = WebClient.builder().codecs(configurer ->
+                configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024) // 10 MB
+        ).build();
     }
 
     @Scheduled(fixedRate=10000)
+    @Transactional
     public void fetchAndStoreBestPrices() {
         List<Map> binanceCryptoList = fetchBinanceCrypto();
-        List<Map> houbiCryptoList = fetchHoubiCrpyto();
+        List<Map<String, Object>> houbiCryptoList = fetchHoubiCrpyto();
 
-        List<TradingPrice> results = new ArrayList<>();
+        //List<TradingPrice> results = new ArrayList<>();
 
         for (String symbol : List.of("ETHUSDT", "BTCUSDT")) {
             // Fetch best prices for each symbol
-            Double bestBidPrice = getBestPrice(symbol, binanceCryptoList, "bidPrice", houbiCryptoList, "bid");
-            Double bestAskPrice = getBestPrice(symbol, binanceCryptoList, "askPrice", houbiCryptoList, "ask");
+            Double bestBidPrice = getBestPrice("bid",symbol, binanceCryptoList, "bidPrice", houbiCryptoList, "bid");
+            Double bestAskPrice = getBestPrice("ask",symbol, binanceCryptoList, "askPrice", houbiCryptoList, "ask");
 
             // Save TradingPrice
             TradingPrice bestTradingPrice = new TradingPrice();
@@ -42,10 +47,9 @@ public class PriceAggregationService {
             bestTradingPrice.setBidPrice(bestBidPrice);
             bestTradingPrice.setAskPrice(bestAskPrice);
             bestTradingPrice.setTimestamp(LocalDateTime.now());
-            results.add(bestTradingPrice);
+            //TODO debug why it's not persisted into DB
+            this.tradingPriceRepo.save(bestTradingPrice);
         }
-
-        this.tradingPriceRepo.saveAll(results);
 
     }
 
@@ -60,31 +64,59 @@ public class PriceAggregationService {
         return binancePrices;
     }
 
-    private List<Map> fetchHoubiCrpyto() {
-        String huobiUrl = Constants.BINANCE_URL;
-        List<Map> houbiPrices = webClient.get()
+    private List<Map<String, Object>> fetchHoubiCrpyto() {
+        String huobiUrl = Constants.HUOBI_URL;
+        List<Map<String, Object>> dataList = webClient.get()
                 .uri(huobiUrl)
                 .retrieve()
-                .bodyToFlux(Map.class)
-                .collectList()
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {}) // Parse the root JSON object
+                .map(response -> (List<Map<String, Object>>) response.get("data")) // Extract the `data` field
                 .block();
-        return houbiPrices;
+
+        if (dataList == null) {
+            System.err.println("No data available in the response!");
+            dataList = List.of(); // Return an empty list if `data` is null
+        }
+
+        return dataList;
     }
 
-    private Double getBestPrice(String symbol, List<Map> firstList, String firstParam, List<Map> secondList, String secondParam) {
+    private Double getBestPrice(String trade, String symbol, List<Map> firstList, String firstParam, List<Map<String, Object>> secondList, String secondParam) {
         double firstBid = firstList.stream()
-                .filter(map -> symbol.equals(map.get("symbol")))
-                .mapToDouble(map -> Double.parseDouble((String) map.get(firstParam)))
+                .filter(map -> symbol.equalsIgnoreCase((String) map.get("symbol"))) // Match symbol
+                .mapToDouble(map -> {
+                    try {
+                        String value = (String) map.get(firstParam);
+                        return Double.parseDouble(value);
+                    } catch (NumberFormatException e) {
+                        System.err.println("Invalid number format for " + firstParam + ": " + map.get(firstParam));
+                        return Double.NaN;
+                    }
+                })
                 .max()
-                .orElse(Double.NaN);
+                .orElse(Double.NaN); // Default to NaN if no valid values
 
         double secondBid = secondList.stream()
-                .filter(map -> symbol.equalsIgnoreCase((String) map.get(secondParam)))
-                .mapToDouble(map -> (double) map.get("bid"))
-                .max()
-                .orElse(Double.NaN);
+                .filter(map -> symbol.equalsIgnoreCase((String) map.get("symbol"))) // Match symbol
+                .mapToDouble(map -> {
+                    try {
+                        Double value = (Double) map.get(secondParam);
+                        return value;
+                    } catch (NumberFormatException e) {
+                        System.err.println("Invalid number format for " + firstParam + ": " + map.get(firstParam));
+                        return Double.NaN;
+                    }
+                })
+                .findFirst()
+                .orElse(Double.NaN); //
 
-        return Math.max(firstBid, secondBid); // Return the highest bid
+        Double bestPrice = 0.0;
+        if (trade.equalsIgnoreCase("bid")) {
+            bestPrice= Math.max(firstBid, secondBid); // Return the highest bid price
+        } else if (trade.equalsIgnoreCase("ask")) {
+            bestPrice= Math.min(firstBid, secondBid); // Return the lowest ask price
+        }
+        return bestPrice;
     }
 
 }
