@@ -27,7 +27,7 @@ public class TradeService {
 
 
     public String trade(Long userId, String symbol, String action, Double quantity) {
-        TradingPrice latestPrice = priceRepo.findLatestTradingPriceByCryptoCurr(symbol);
+        TradingPrice latestPrice = priceRepo.findLatestTradingPriceByCryptoCurrNative(symbol);
         if (latestPrice == null) {
             return "No prices available for trading";
         }

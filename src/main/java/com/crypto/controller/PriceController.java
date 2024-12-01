@@ -18,7 +18,7 @@ public class PriceController {
 
     @GetMapping("/latest")
     public ResponseEntity<TradingPrice> getLatestPrice(String symbol) {
-        TradingPrice price = tradingPriceRepo.findLatestTradingPriceByCryptoCurr(symbol);
+        TradingPrice price = tradingPriceRepo.findLatestTradingPriceByCryptoCurrNative(symbol);
         return ResponseEntity.ok(price);
     }
 }
