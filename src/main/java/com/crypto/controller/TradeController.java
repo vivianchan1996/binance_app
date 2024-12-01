@@ -15,7 +15,7 @@ public class TradeController {
         this.tradeService = tradeService;
     }
 
-    @PostMapping
+    @PostMapping("/newTransaction")
     public ResponseEntity<String> trade(Long userId, String symbol, String action, Double quantity) {
         String result = tradeService.trade(userId, symbol, action, quantity);
         return ResponseEntity.ok(result);

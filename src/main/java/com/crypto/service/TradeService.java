@@ -8,6 +8,8 @@ import com.crypto.repository.TransactionHistoryRepo;
 import com.crypto.repository.UserWalletBalanceRepo;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -31,6 +33,7 @@ public class TradeService {
         if (latestPrice == null) {
             return "No prices available for trading";
         }
+
         // Bid price use for a SELL order, ask price use for a BUY order
         Double price = action.equalsIgnoreCase("BUY") ? latestPrice.getAskPrice() : latestPrice.getBidPrice();
         Double total = price * quantity;
@@ -46,7 +49,7 @@ public class TradeService {
         for (UserWalletBalance balance : balances) {
             if (balance.getCurrency().equalsIgnoreCase("USDT")) {
                 usdtBalance = balance;
-            } else if (balance.getCurrency().equalsIgnoreCase("symbol")) {
+            } else if (balance.getCurrency().equalsIgnoreCase(symbol)) {
                 cryptoBalance = balance;
             }
         }
@@ -55,15 +58,24 @@ public class TradeService {
             if (usdtBalance.getBalance() < total) {
                 return "Insufficient USDT balance.";
             }
-            usdtBalance.setBalance(usdtBalance.getBalance() - total);
-            // If user buy 1 BTC, the balance will be 1
-            cryptoBalance.setBalance(quantity);
+
+            // Perform bigdecimal mathematics to avoid trailing decimal values
+            Double newUsdtBalance = BigDecimal.valueOf(usdtBalance.getBalance()).subtract(BigDecimal.valueOf(total)).setScale(2, RoundingMode.HALF_UP).doubleValue();
+            usdtBalance.setBalance(newUsdtBalance);
+            // If user buy 0.1 BTC, the balance will be 0.1
+            Double newCrpytoBalance = BigDecimal.valueOf(cryptoBalance.getBalance()).add(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP).doubleValue();
+            cryptoBalance.setBalance(newCrpytoBalance);
+
         } else if (action.equalsIgnoreCase("SELL")) {
             if (cryptoBalance.getBalance() < quantity) {
                 return "Insufficient crypto balance.";
             }
-            cryptoBalance.setBalance(cryptoBalance.getBalance() - quantity);
-            usdtBalance.setBalance(usdtBalance.getBalance() + total);
+            // Perform bigdecimal mathematics to avoid trailing decimal values
+            Double newUsdtBalance = BigDecimal.valueOf(usdtBalance.getBalance()).add(BigDecimal.valueOf(total)).setScale(2, RoundingMode.HALF_UP).doubleValue();
+            usdtBalance.setBalance(newUsdtBalance);
+
+            Double newCrpytoBalance = BigDecimal.valueOf(cryptoBalance.getBalance()).subtract(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP).doubleValue();
+            cryptoBalance.setBalance(newCrpytoBalance);
         }
 
         // Save the balance into DB
