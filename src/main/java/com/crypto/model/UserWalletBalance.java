@@ -9,6 +9,7 @@ import lombok.*;
 @Table(name = "user_wallet_balance")
 public class UserWalletBalance {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
     private Long userId;
     private String currency;

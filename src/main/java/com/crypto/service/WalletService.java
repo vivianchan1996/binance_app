@@ -22,7 +22,7 @@ public class WalletService {
      * @return List of wallet balances.
      */
     public List<UserWalletBalance> getUserWalletBalances(Long userId) {
-        return walletRepo.findAll().stream().filter(wallet -> wallet.getUserId().equals(userId)).collect(Collectors.toList());
+        return walletRepo.findByUserId(userId);
     }
 
     /**
