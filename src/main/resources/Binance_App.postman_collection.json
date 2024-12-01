@@ -1,0 +1,124 @@
+{
+	"info": {
+		"_postman_id": "d1169c78-71c8-49f4-aa63-99c8dc7247fd",
+		"name": "Binance App",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "7245291"
+	},
+	"item": [
+		{
+			"name": "GetUserWalletBalance",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/wallet/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"wallet",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetLatestTradingPriceBySymbol",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/price/latest?symbol=BTCUSDT",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"price",
+						"latest"
+					],
+					"query": [
+						{
+							"key": "symbol",
+							"value": "BTCUSDT"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "NewTrade",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/trade/newTransaction?userId=1&symbol=BTCUSDT&action=Sell&quantity=0.01",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"trade",
+						"newTransaction"
+					],
+					"query": [
+						{
+							"key": "userId",
+							"value": "1"
+						},
+						{
+							"key": "symbol",
+							"value": "BTCUSDT"
+						},
+						{
+							"key": "action",
+							"value": "Sell"
+						},
+						{
+							"key": "quantity",
+							"value": "0.01"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetAllTransactionHistory",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/history/allByUserId?userId=1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"history",
+						"allByUserId"
+					],
+					"query": [
+						{
+							"key": "userId",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
